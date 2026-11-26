@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Портфолио трекеров задач с канбан-доской и ролями (FGIp07)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0b1120; color: #f8fafc; min-height: 100vh; padding: 48px 20px; }
+    .wrap { max-width: 1040px; margin: 0 auto; }
+    h1 { font-size: 28px; margin-bottom: 10px; }
+    .sub { color: #94a3b8; margin-bottom: 32px; font-size: 15px; line-height: 1.5; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; }
+    .tag { display: inline-block; font-size: 12px; padding: 3px 9px; border-radius: 999px; background: rgba(99,102,241,.2); color: #c7d2fe; margin-bottom: 8px; }
+    h2 { font-size: 19px; margin-bottom: 8px; }
+    p { font-size: 14px; color: #cbd5e1; line-height: 1.5; }
+    .meta { font-size: 13px; color: #94a3b8; margin-top: 8px; }
+    a.btn { display: inline-block; text-align: center; text-decoration: none; background: #6366f1; color: #fff; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; }
+    a.btn:hover { background: #4f46e5; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Канбан-трекеры задач с ролевой моделью (3 MVP-кейса)</h1>
+    <p class="sub">Набор кастомных веб-трекеров, разработанных под реальные бизнес-задачи: онлайн-школа, строительная компания и IT-агентство. В каждом проекте реализованы канбан-доска, переключение ролей (RBAC) и интерактивное управление статусами.</p>
+    <div class="grid">
+      <div class="card">
+        <div>
+          <span class="tag">Кейс №1 • Онлайн-школа</span>
+          <h2>EduFlow — Конвейер уроков</h2>
+          <p>5 этапов производства курса (Методист → Эксперт → Редактор → Дизайн → Продакшн), фильтрация видимости по 4 ролям, вложения, комментарии и просрочки.</p>
+          <div class="meta">Оценка кейса: 35 000 ₽ • Время сборки: 2 ч 20 мин</div>
+        </div>
+        <a class="btn" href="./tracker-school/">Открыть EduFlow →</a>
+      </div>
+      <div class="card">
+        <div>
+          <span class="tag" style="background:rgba(245,158,11,.2);color:#fcd34d">Кейс №2 • Строительство</span>
+          <h2>StroyControl PWA — Контроль объектов</h2>
+          <p>6 этапов стройки по 5 домам, чек-листы технадзора, фото-отчёты с GPS, дашборд директора и имитация офлайн-очереди IndexedDB для прораба.</p>
+          <div class="meta">Оценка кейса: 55 000 ₽ • Время сборки: 2 ч 05 мин</div>
+        </div>
+        <a class="btn" style="background:#d97706" href="./tracker-construction/">Открыть StroyControl →</a>
+      </div>
+      <div class="card">
+        <div>
+          <span class="tag" style="background:rgba(137,87,229,.22);color:#d2a8ff">Кейс №3 • IT-агентство</span>
+          <h2>DevSprint — Спринты и GitHub PR</h2>
+          <p>Доска спринтов (Backlog → Done), симуляция автоперевода карточек по Pull Request, встроенный тайм-трекер План/Факт и клиентский Read-only портал.</p>
+          <div class="meta">Оценка кейса: 75 000 ₽ • Время сборки: 1 ч 35 мин</div>
+        </div>
+        <a class="btn" style="background:#238636" href="./tracker-agency/">Открыть DevSprint →</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

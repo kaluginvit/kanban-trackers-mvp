@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StroyControl PWA — Трекер строительных объектов</title>
+  <style>
+    :root {
+      --bg: #111827; --card: #1f2937; --border: #374151; --text: #f9fafb;
+      --muted: #9ca3af; --amber: #f59e0b; --green: #10b981; --blue: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .title { display: flex; align-items: center; gap: 10px; }
+    .icon { width: 36px; height: 36px; border-radius: 8px; background: var(--amber); color: #111827; font-weight: 900; display: grid; place-items: center; }
+    .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    select, button { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; cursor: pointer; }
+    button.primary { background: var(--amber); color: #111827; border-color: var(--amber); font-weight: 700; }
+    .offline-pill { padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(16,185,129,.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,.35); }
+    .offline-pill.is-off { background: rgba(245,158,11,.2); color: #fcd34d; border-color: rgba(245,158,11,.45); }
+    .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 16px 24px; }
+    .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+    .kpi span { font-size: 12px; color: var(--muted); }
+    .kpi strong { display: block; font-size: 20px; margin-top: 4px; color: var(--amber); }
+    .board { display: grid; grid-template-columns: repeat(6, minmax(210px, 1fr)); gap: 12px; padding: 0 24px 24px; overflow-x: auto; }
+    .col { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px; min-height: 410px; }
+    .col h3 { font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 10px; display: flex; justify-content: space-between; }
+    .item { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 12px; }
+    .item b { font-size: 13px; display: block; margin-bottom: 4px; }
+    .check { margin: 6px 0; color: var(--muted); }
+    .item button { width: 100%; margin-top: 6px; padding: 6px; font-size: 11px; }
+    .photo-tag { display: inline-block; background: rgba(59,130,246,.2); color: #93c5fd; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <div class="icon">SC</div>
+      <div>
+        <h2>StroyControl PWA — Контроль 5 объектов</h2>
+        <div style="font-size:12px;color:var(--muted)">Офлайн-кэш IndexedDB • Фото + GPS • Чек-листы технадзора</div>
+      </div>
+    </div>
+    <div class="controls">
+      <span class="offline-pill" id="netPill">● Онлайн (синхронизировано)</span>
+      <button id="toggleNet">Имитировать офлайн</button>
+      <select id="roleSelect">
+        <option value="director">Гендиректор (все 5 домов)</option>
+        <option value="tn">Технадзор (чек-листы)</option>
+        <option value="prorab">Прораб Иванов (Дом №3)</option>
+      </select>
+      <button class="primary" id="syncBtn">Синхронизировать (0)</button>
+    </div>
+  </header>
+
+  <section class="dashboard" id="kpis"></section>
+  <main class="board" id="board"></main>
+
+  <script>
+    const STAGES = ['Котлован', 'Фундамент', 'Стены', 'Кровля', 'Инженерия', 'Отделка'];
+    let isOffline = false;
+    let queueCount = 0;
+    let role = 'director';
+
+    const items = [
+      { id: 1, house: 'Дом №1 (КП Сосны)', stage: 4, checklist: '8/8', photos: 14, gps: '55.79, 49.12', status: 'Принято ТН', prorab: 'Петров' },
+      { id: 2, house: 'Дом №2 (КП Сосны)', stage: 3, checklist: '6/6', photos: 9, gps: '55.79, 49.13', status: 'Принято ТН', prorab: 'Петров' },
+      { id: 3, house: 'Дом №3 (Лесной)', stage: 2, checklist: '4/5', photos: 5, gps: '55.81, 49.18', status: 'Ждёт ТН', prorab: 'Иванов' },
+      { id: 4, house: 'Дом №4 (Лесной)', stage: 1, checklist: '5/5', photos: 7, gps: '55.81, 49.19', status: 'Принято ТН', prorab: 'Сидоров' },
+      { id: 5, house: 'Дом №5 (Озёрный)', stage: 0, checklist: '3/4', photos: 4, gps: '55.84, 49.05', status: 'В работе', prorab: 'Иванов' }
+    ];
+
+    function render() {
+      const list = role === 'prorab' ? items.filter(i => i.prorab === 'Иванов') : items;
+      const avg = Math.round(list.reduce((a, b) => a + ((b.stage + 1) / STAGES.length) * 100, 0) / list.length);
+      const totalPhotos = list.reduce((a, b) => a + b.photos, 0);
+      document.getElementById('kpis').innerHTML = `
+        <div class="kpi"><span>Объектов в контуре</span><strong>${list.length}</strong></div>
+        <div class="kpi"><span>Средняя готовность</span><strong>${avg}%</strong></div>
+        <div class="kpi"><span>Фото-отчётов с GPS</span><strong>${totalPhotos} шт.</strong></div>
+        <div class="kpi"><span>Очередь офлайн-синхры</span><strong>${queueCount} опер.</strong></div>
+      `;
+      document.getElementById('syncBtn').textContent = `Синхронизировать (${queueCount})`;
+
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      STAGES.forEach((st, idx) => {
+        const colItems = list.filter(i => i.stage === idx);
+        const col = document.createElement('div');
+        col.className = 'col';
+        col.innerHTML = `<h3><span>${st}</span><span>${colItems.length}</span></h3>`;
+        colItems.forEach(it => {
+          const el = document.createElement('div');
+          el.className = 'item';
+          el.innerHTML = `
+            <b>${it.house}</b>
+            <div>Прораб: ${it.prorab} • ${it.status}</div>
+            <div class="check">Чек-лист: <b>${it.checklist}</b></div>
+            <span class="photo-tag">📷 ${it.photos} фото • GPS ${it.gps}</span>
+            ${idx < STAGES.length - 1 ? `<button class="primary" onclick="advance(${it.id})">${role === 'tn' ? '✓ Принять этап' : 'Сдать этап →'}</button>` : ''}
+          `;
+          col.appendChild(el);
+        });
+        board.appendChild(col);
+      });
+    }
+
+    window.advance = function(id) {
+      const it = items.find(x => x.id === id);
+      if (it.stage < STAGES.length - 1) {
+        it.stage++;
+        it.photos += 3;
+        it.status = isOffline ? 'В кэше (Офлайн)' : 'Принято ТН';
+        if (isOffline) queueCount++;
+        render();
+      }
+    };
+
+    document.getElementById('toggleNet').onclick = () => {
+      isOffline = !isOffline;
+      const pill = document.getElementById('netPill');
+      pill.textContent = isOffline ? '● Офлайн (пишем в IndexedDB)' : '● Онлайн (синхронизировано)';
+      pill.classList.toggle('is-off', isOffline);
+      document.getElementById('toggleNet').textContent = isOffline ? 'Вернуть сеть' : 'Имитировать офлайн';
+    };
+    document.getElementById('syncBtn').onclick = () => {
+      if (isOffline) return alert('Сеть недоступна — данные безопасно хранятся в IndexedDB');
+      queueCount = 0;
+      items.forEach(i => { if (i.status.includes('Офлайн')) i.status = 'Синхронизировано'; });
+      render();
+    };
+    document.getElementById('roleSelect').onchange = e => { role = e.target.value; render(); };
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevSprint — Трекер агентства (GitHub PR + Тайм-трекер)</title>
+  <style>
+    :root { --bg:#0d1117; --surface:#161b22; --border:#30363d; --text:#e6edf3; --muted:#8b949e; --blue:#2f81f7; --green:#238636; --purple:#8957e5; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .controls { display: flex; gap: 10px; align-items: center; }
+    select, button { padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; cursor: pointer; }
+    button.green { background: var(--green); border-color: var(--green); font-weight: 600; }
+    .summary { display: flex; gap: 14px; padding: 12px 22px; border-bottom: 1px solid var(--border); background: #0f141b; font-size: 13px; flex-wrap: wrap; }
+    .summary span b { color: #79c0ff; }
+    .board { display: grid; grid-template-columns: repeat(6, minmax(210px, 1fr)); gap: 12px; padding: 16px 22px; overflow-x: auto; }
+    .col { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; min-height: 430px; }
+    .col h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 10px; display: flex; justify-content: space-between; }
+    .card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 12px; }
+    .pr { display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 5px; background: rgba(137,87,229,.22); color: #d2a8ff; margin-top: 6px; }
+    .timer-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+    .timer-row button { padding: 4px 8px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h2>DevSprint — Трекер разработки + GitHub PR</h2>
+      <div style="font-size:12px;color:var(--muted)">Вебхуки GitHub PullRequestEvent • Тайм-трекинг План/Факт • Клиентский Read-Only режим</div>
+    </div>
+    <div class="controls">
+      <select id="roleSelect">
+        <option value="lead">Tech Lead (полный доступ)</option>
+        <option value="dev">Developer</option>
+        <option value="client">Клиент заказчика (Read-only)</option>
+      </select>
+      <button class="green" id="simPrBtn">Симулировать GitHub PR → Review</button>
+    </div>
+  </header>
+
+  <div class="summary" id="summary"></div>
+  <main class="board" id="board"></main>
+
+  <script>
+    const COLS = ['Backlog', 'Ready', 'In Progress', 'Code Review', 'QA', 'Done'];
+    let role = 'lead';
+    let tasks = [
+      { id: 'DEV-101', title: 'OAuth авторизация через GitHub', col: 5, plan: 4.0, fact: 3.5, pr: '#PR-41 (merged)', running: false, clientVisible: true },
+      { id: 'DEV-102', title: 'Вебхуки синхронизации Pull Request', col: 3, plan: 6.0, fact: 4.2, pr: '#PR-44 (open)', running: false, clientVisible: true },
+      { id: 'DEV-103', title: 'Отчёт План/Факт в PDF и CSV', col: 2, plan: 5.0, fact: 2.1, pr: '#PR-45 (draft)', running: true, clientVisible: true },
+      { id: 'DEV-104', title: 'Миграция задач из Jira CSV', col: 1, plan: 3.0, fact: 0.0, pr: '—', running: false, clientVisible: false },
+      { id: 'DEV-105', title: 'Read-only портал для заказчика', col: 4, plan: 4.0, fact: 3.8, pr: '#PR-43 (approved)', running: false, clientVisible: true }
+    ];
+
+    function render() {
+      const visible = role === 'client' ? tasks.filter(t => t.clientVisible && t.col >= 2) : tasks;
+      const totalPlan = visible.reduce((a, b) => a + b.plan, 0).toFixed(1);
+      const totalFact = visible.reduce((a, b) => a + b.fact, 0).toFixed(1);
+      document.getElementById('summary').innerHTML = `
+        <span>Задач в спринте: <b>${visible.length}</b></span>
+        <span>План: <b>${totalPlan} ч</b></span>
+        <span>Факт (таймер): <b>${totalFact} ч</b></span>
+        <span>Режим: <b>${role === 'client' ? 'Публичный портал клиента (без внутренних задач)' : 'Команда агентства'}</b></span>
+      `;
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      COLS.forEach((cName, idx) => {
+        if (role === 'client' && idx < 2) return;
+        const colTasks = visible.filter(t => t.col === idx);
+        const col = document.createElement('div');
+        col.className = 'col';
+        col.innerHTML = `<h3><span>${cName}</span><span>${colTasks.length}</span></h3>`;
+        colTasks.forEach(t => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <div style="color:var(--muted);font-size:11px">${t.id} • План ${t.plan}ч / Факт ${t.fact.toFixed(1)}ч</div>
+            <div style="font-weight:600;margin-top:4px">${t.title}</div>
+            <span class="pr">${t.pr}</span>
+            ${role !== 'client' ? `
+              <div class="timer-row">
+                <button onclick="toggleTimer('${t.id}')">${t.running ? '⏸ Стоп' : '▶ Старт'}</button>
+                ${idx < COLS.length - 1 ? `<button onclick="moveNext('${t.id}')">→</button>` : ''}
+              </div>` : ''}
+          `;
+          col.appendChild(card);
+        });
+        board.appendChild(col);
+      });
+    }
+
+    window.toggleTimer = id => {
+      const t = tasks.find(x => x.id === id);
+      t.running = !t.running;
+      if (!t.running) t.fact += 0.3;
+      render();
+    };
+    window.moveNext = id => {
+      const t = tasks.find(x => x.id === id);
+      if (t.col < COLS.length - 1) { t.col++; render(); }
+    };
+    document.getElementById('simPrBtn').onclick = () => {
+      const t = tasks.find(x => x.col === 2);
+      if (t) { t.col = 3; t.pr = '#PR-45 (ready for review)'; render(); }
+    };
+    document.getElementById('roleSelect').onchange = e => { role = e.target.value; render(); };
+    render();
+  </script>
+</body>
+</html>
